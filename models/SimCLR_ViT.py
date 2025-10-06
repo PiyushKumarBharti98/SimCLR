@@ -29,7 +29,6 @@ class SimCLRXRayTransform:
 
         # convert to tensor and normalize (ImageNet mean/std if repeating channels)
         self.to_tensor = transforms.ToTensor()
-        # If using 3-channel ImageNet-pretrained ViT, use ImageNet norm; else normalize single channel to [0,1] mean/std
         self.normalize_3ch = transforms.Normalize(
             mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)
         )
@@ -127,3 +126,40 @@ class ViTBackbone(nn.Module):
     def forward(self, x):
         h = self.model(x)
         return h
+
+
+class NTXentLoss(nn.Module):
+    def __init__(self, batch_size: int, temperature: float = 0.1, device="cuda"):
+        super().__init__()
+        self.batch_size = batch_size
+        self.temperature = temperature
+        self.device = device
+        self.criterion = nn.CrossEntropyLoss(reduction="mean")
+        self.register_buffer("mask", self._create_mask())
+
+    def _create_mask(self):
+        N = 2 * self.batch_size
+        mask = torch.ones((N, N), dtype=torch.bool)
+        mask.fill_diagonal_(False)
+        for i in range(self.batch_size):
+            mask[i, i + self.batch_size] = False
+            mask[i + self.batch_size, i] = False
+        return mask
+
+    def forward(self, z1, z2):
+        assert z1.shape == z2.shape
+        B = z1.shape[0]
+        z = torch.cat([z1, z2], dim=0)  # 2B x D
+        z = F.normalize(z, dim=1)
+        sim = torch.matmul(z, z.T) / self.temperature  # 2B x 2B
+
+        positives = torch.cat(
+            [torch.diag(sim, B), torch.diag(sim, -B)], dim=0
+        ).unsqueeze(
+            1
+        )  # 2B x 1
+        negatives = sim[self.mask].view(2 * B, -1)  # 2B x (2B-2)
+        logits = torch.cat([positives, negatives], dim=1)
+        labels = torch.zeros(2 * B, dtype=torch.long).to(self.device)
+        loss = self.criterion(logits, labels)
+        return loss
