@@ -1,18 +1,6 @@
 import os
-import csv
 import argparse
-from typing import Tuple, List
-
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torch.utils.data import Dataset, DataLoader
-from PIL import Image
-import random
-
-import torchvision
-from torchvision import transforms
-
 
 def train_one_epoch(
     model,

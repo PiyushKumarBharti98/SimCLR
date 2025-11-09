@@ -15,12 +15,11 @@ class SimCLRXRayTransform:
         self.to_3ch = to_3ch
         self.hflip_prob = hflip_prob
 
-        # define transform steps appropriate for X-rays
         self.base_transform = transforms.Compose(
             [
                 transforms.Resize(int(image_size * 1.1)),
                 transforms.RandomResizedCrop(image_size, scale=(0.7, 1.0)),
-                transforms.RandomRotation(10),  # small rotations
+                transforms.RandomRotation(10),  
                 transforms.RandomAffine(degrees=0, translate=(0.05, 0.05), shear=0.0),
                 transforms.RandomHorizontalFlip(p=self.hflip_prob),
                 transforms.ColorJitter(brightness=0.15, contrast=0.15),
