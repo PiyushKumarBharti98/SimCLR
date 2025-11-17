@@ -1,8 +1,5 @@
-from math import log
 import torch
 from torch import nn
-from torch.autograd import forward_ad
-import torchvision
 from torchvision.models import resnet50
 
 
@@ -11,7 +8,7 @@ class ResNetEncoder(nn.Module):
 
     def __init__(self, pretrained: bool) -> None:
         super().__init__()
-        resnet = torchvision.models.resnet50(pretrained=pretrained)
+        resnet = resnet50(pretrained=pretrained)
         self.features = nn.Sequential(*list(resnet.children())[:-1])
         self.feat_dim = resnet.fc.in_features
 
@@ -45,7 +42,11 @@ def reparameterize(mu, log_var):
 
 class SimpleDecoder(nn.Module):
     def __init__(
-        self, latent_dim=128, start_features=2048, out_channels=3, img_size=224
+        self,
+        latent_dim: int = 128,
+        start_features: int = 2048,
+        out_channels: int = 3,
+        img_size: int = 224,
     ):
         super().__init__()
         self.start_size = img_size // 16
